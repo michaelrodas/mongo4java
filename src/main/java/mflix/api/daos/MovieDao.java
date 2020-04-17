@@ -15,9 +15,8 @@ import java.util.LinkedList;
 import java.util.List;
 
 import static com.mongodb.client.model.Filters.all;
-import static com.mongodb.client.model.Projections.*;
-import static com.sun.tools.doclint.Entity.and;
-import static javax.management.Query.eq;
+import static com.mongodb.client.model.Projections.fields;
+import static com.mongodb.client.model.Projections.include;
 
 @Component
 public class MovieDao extends AbstractMFlixDao {
@@ -124,7 +123,7 @@ public class MovieDao extends AbstractMFlixDao {
     public List<Document> getMoviesByCountry(String... country) {
 
         Bson queryFilter = all("countries", country);
-        Bson projection = fields(include("title"), excludeId());
+        Bson projection = fields(include("title"));
 
         List<Document> movies = new ArrayList<>();
         moviesCollection.find(queryFilter).projection(projection).into(movies);
