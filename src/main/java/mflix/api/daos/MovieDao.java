@@ -14,6 +14,8 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
+import static com.mongodb.client.model.Aggregates.limit;
+import static com.mongodb.client.model.Aggregates.skip;
 import static com.mongodb.client.model.Filters.all;
 import static com.mongodb.client.model.Filters.in;
 import static com.mongodb.client.model.Projections.fields;
@@ -196,9 +198,8 @@ public class MovieDao extends AbstractMFlixDao {
         // sort key
         Bson sort = Sorts.descending(sortKey);
         List<Document> movies = new ArrayList<>();
-        // TODO > Ticket: Paging - implement the necessary cursor methods to support simple
-        // pagination like skip and limit in the code below
-        moviesCollection.find(castFilter).sort(sort).iterator()
+
+        moviesCollection.find(castFilter).limit(limit).skip(skip).sort(sort).iterator()
         .forEachRemaining(movies::add);
         return movies;
     }
@@ -267,10 +268,10 @@ public class MovieDao extends AbstractMFlixDao {
     public List<Document> getMoviesCastFaceted(int limit, int skip, String... cast) {
         List<Document> movies = new ArrayList<>();
         String sortKey = "tomatoes.viewer.numReviews";
-        Bson skipStage = Aggregates.skip(skip);
+        Bson skipStage = skip(skip);
         Bson matchStage = Aggregates.match(Filters.in("cast", cast));
         Bson sortStage = Aggregates.sort(Sorts.descending(sortKey));
-        Bson limitStage = Aggregates.limit(limit);
+        Bson limitStage = limit(limit);
         Bson facetStage = buildFacetStage();
         // Using a LinkedList to ensure insertion order
         List<Bson> pipeline = new LinkedList<>();
