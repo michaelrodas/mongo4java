@@ -1,11 +1,10 @@
 package mflix.api.daos;
 
 import com.mongodb.MongoClientSettings;
-import com.mongodb.WriteConcern;
+import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.UpdateOptions;
-import com.mongodb.client.result.DeleteResult;
 import com.mongodb.client.result.UpdateResult;
 import mflix.api.models.Session;
 import mflix.api.models.User;
@@ -20,10 +19,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
 import static com.mongodb.client.model.Filters.eq;
-import static com.mongodb.client.model.Updates.set;
 import static org.bson.codecs.configuration.CodecRegistries.fromProviders;
 import static org.bson.codecs.configuration.CodecRegistries.fromRegistries;
 
@@ -59,11 +56,25 @@ public class UserDao extends AbstractMFlixDao {
      * @return True if successful, throw IncorrectDaoOperation otherwise
      */
     public boolean addUser(User user) {
-        try {
-            usersCollection.withWriteConcern(WriteConcern.W1.withWTimeout(2, TimeUnit.MICROSECONDS)).
-                    insertOne(user);
+        Document doc1 = new Document();
+        doc1.put("name", user.getName());
+        doc1.put("email", user.getEmail());
+        doc1.put("hashedpw", user.getHashedpw());
+        doc1.put("admin", user.isAdmin());
+        doc1.put("empty", user.isEmpty());
+        if (user.getPreferences() != null) {
+            doc1.putAll(user.getPreferences());
+        }
+
+        Bson query = new Document("email", user.getEmail());
+
+        UpdateOptions options = new UpdateOptions();
+        options.upsert(true);
+
+        UpdateResult result = usersCollection.updateOne(query, new Document("$set", doc1), options);
+        if (result.getModifiedCount() == 0) {
             return true;
-        } catch (Exception e) {
+        } else {
             throw new IncorrectDaoOperation("Couldn't insert user");
         }
     }
@@ -76,13 +87,15 @@ public class UserDao extends AbstractMFlixDao {
      * @return true if successful
      */
     public boolean createUserSession(String userId, String jwt) {
-        Session session = new Session();
-        session.setUserId(userId);
-        session.setJwt(jwt);
-        if (sessionsCollection.find(eq("user_id", userId)).first() != null) { //hotfix
-            deleteUserSessions(userId);
-        }
-        return  sessionsCollection.insertOne(session).wasAcknowledged();
+        Bson query = new Document("jwt", jwt);
+        UpdateOptions options = new UpdateOptions();
+        options.upsert(true);
+        Document data = new Document();
+        data.put("user_id", userId);
+        data.put("jwt", jwt);
+        UpdateResult result = sessionsCollection.updateOne(query, new Document("$set", data), options);
+
+        return result.getModifiedCount() == 0;
     }
 
     /**
@@ -92,7 +105,11 @@ public class UserDao extends AbstractMFlixDao {
      * @return User object or null.
      */
     public User getUser(String email) {
-        return usersCollection.find(eq("email", email)).first();
+        Bson query = eq("email", email);
+        User user;
+        FindIterable<User> users = usersCollection.find(query);
+        user = users.first();
+        return user;
     }
 
     /**
@@ -107,13 +124,13 @@ public class UserDao extends AbstractMFlixDao {
     }
 
     public boolean deleteUserSessions(String userId) {
-        DeleteResult result = null;
         try {
-            result = sessionsCollection.deleteMany(eq("user_id", userId));
+            sessionsCollection.deleteOne(new Document("user_id", userId));
+            return true;
         } catch (Exception e) {
-            log.error("The was an error while deleting user's sessions", e);
+            log.error("The was an error while deleting the session", e);
         }
-        return result != null && result.getDeletedCount() > 0;
+        return false;
     }
 
     /**
@@ -124,13 +141,13 @@ public class UserDao extends AbstractMFlixDao {
      */
     public boolean deleteUser(String email) {
         deleteUserSessions(email);
-        DeleteResult result = null;
         try {
-            result = usersCollection.deleteOne(eq("email", email));
+            usersCollection.deleteOne(new Document("email", email));
+            return true;
         } catch (Exception e) {
             log.error("The was an error while deleting the user", e);
         }
-        return result != null && result.getDeletedCount() > 0;
+        return false;
     }
 
     /**
@@ -142,18 +159,13 @@ public class UserDao extends AbstractMFlixDao {
      * @return User object that just been updated.
      */
     public boolean updateUserPreferences(String email, Map<String, ?> userPreferences) {
-        UpdateResult result;
-        try {
-            Document updatePrefs = new Document();
-            userPreferences.forEach(updatePrefs::put);
-            UpdateOptions options = new UpdateOptions();
-            options.upsert(true);
-            result = usersCollection.updateOne(eq("email", email),
-                    set("preferences", updatePrefs),
-                    options);
-        } catch (Exception e) {
-            throw new IncorrectDaoOperation("Couldn't update user preferences", e);
-        }
+        Document updatePrefs = new Document();
+        userPreferences.forEach(updatePrefs::put);
+        UpdateOptions options = new UpdateOptions();
+        options.upsert(true);
+        UpdateResult result = usersCollection.updateOne(new Document("email", email),
+                new Document("$set", new Document("preferences", updatePrefs)),
+                options);
 
         return result.getModifiedCount() != 0;
     }
