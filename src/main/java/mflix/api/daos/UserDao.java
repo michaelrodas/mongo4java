@@ -2,10 +2,10 @@ package mflix.api.daos;
 
 import com.mongodb.MongoClientSettings;
 import com.mongodb.WriteConcern;
-import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.UpdateOptions;
+import com.mongodb.client.result.DeleteResult;
 import com.mongodb.client.result.UpdateResult;
 import mflix.api.models.Session;
 import mflix.api.models.User;
@@ -22,6 +22,7 @@ import org.springframework.context.annotation.Configuration;
 import java.util.Map;
 
 import static com.mongodb.client.model.Filters.eq;
+import static com.mongodb.client.model.Updates.set;
 import static org.bson.codecs.configuration.CodecRegistries.fromProviders;
 import static org.bson.codecs.configuration.CodecRegistries.fromRegistries;
 
@@ -89,15 +90,11 @@ public class UserDao extends AbstractMFlixDao {
      * @return true if successful
      */
     public boolean createUserSession(String userId, String jwt) {
-        UpdateOptions options = new UpdateOptions();
-        options.upsert(true);
-        Document data = new Document();
-        data.put("user_id", userId);
-        data.put("jwt", jwt);
-        UpdateResult result = sessionsCollection.updateOne(eq("jwt", jwt),
-                new Document("$set", data), options);
-
-        return result.getModifiedCount() == 0;
+        Session session = new Session();
+        session.setUserId(userId);
+        session.setJwt(jwt);
+        deleteUserSessions(userId);
+        return  sessionsCollection.insertOne(session).wasAcknowledged();
     }
 
     /**
@@ -107,11 +104,7 @@ public class UserDao extends AbstractMFlixDao {
      * @return User object or null.
      */
     public User getUser(String email) {
-        Bson query = eq("email", email);
-        User user;
-        FindIterable<User> users = usersCollection.find(query);
-        user = users.first();
-        return user;
+        return usersCollection.find(eq("email", email)).first();
     }
 
     /**
@@ -126,13 +119,13 @@ public class UserDao extends AbstractMFlixDao {
     }
 
     public boolean deleteUserSessions(String userId) {
+        DeleteResult result = null;
         try {
-            sessionsCollection.deleteOne(eq("user_id", userId));
-            return true;
+            result = sessionsCollection.deleteMany(eq("user_id", userId));
         } catch (Exception e) {
-            log.error("The was an error while deleting the session", e);
+            log.error("The was an error while deleting user's sessions", e);
         }
-        return false;
+        return result != null && result.getDeletedCount() > 0;
     }
 
     /**
@@ -143,13 +136,13 @@ public class UserDao extends AbstractMFlixDao {
      */
     public boolean deleteUser(String email) {
         deleteUserSessions(email);
+        DeleteResult result = null;
         try {
-            usersCollection.deleteOne(eq("email", email));
-            return true;
+            result = usersCollection.deleteOne(eq("email", email));
         } catch (Exception e) {
             log.error("The was an error while deleting the user", e);
         }
-        return false;
+        return result != null && result.getDeletedCount() > 0;
     }
 
     /**
@@ -161,13 +154,18 @@ public class UserDao extends AbstractMFlixDao {
      * @return User object that just been updated.
      */
     public boolean updateUserPreferences(String email, Map<String, ?> userPreferences) {
-        Document updatePrefs = new Document();
-        userPreferences.forEach(updatePrefs::put);
-        UpdateOptions options = new UpdateOptions();
-        options.upsert(true);
-        UpdateResult result = usersCollection.updateOne(eq("email", email),
-                new Document("$set", new Document("preferences", updatePrefs)),
-                options);
+        UpdateResult result;
+        try {
+            Document updatePrefs = new Document();
+            userPreferences.forEach(updatePrefs::put);
+            UpdateOptions options = new UpdateOptions();
+            options.upsert(true);
+            result = usersCollection.updateOne(eq("email", email),
+                    set("preferences", updatePrefs),
+                    options);
+        } catch (Exception e) {
+            throw new IncorrectDaoOperation("Couldn't update user preferences", e);
+        }
 
         return result.getModifiedCount() != 0;
     }
