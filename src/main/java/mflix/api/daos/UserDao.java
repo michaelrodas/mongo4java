@@ -93,7 +93,9 @@ public class UserDao extends AbstractMFlixDao {
         Session session = new Session();
         session.setUserId(userId);
         session.setJwt(jwt);
-        deleteUserSessions(userId);
+        if (sessionsCollection.find(eq("user_id", userId)).first() != null) { //hotfix
+            deleteUserSessions(userId);
+        }
         return  sessionsCollection.insertOne(session).wasAcknowledged();
     }
 
