@@ -1,6 +1,7 @@
 package mflix.api.daos;
 
 import com.mongodb.MongoClientSettings;
+import com.mongodb.WriteConcern;
 import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoCollection;
@@ -66,12 +67,13 @@ public class UserDao extends AbstractMFlixDao {
             doc1.putAll(user.getPreferences());
         }
 
-        Bson query = new Document("email", user.getEmail());
+        Bson query = eq("email", user.getEmail());
 
         UpdateOptions options = new UpdateOptions();
         options.upsert(true);
 
-        UpdateResult result = usersCollection.updateOne(query, new Document("$set", doc1), options);
+        UpdateResult result = usersCollection.withWriteConcern(WriteConcern.W1).
+                updateOne(query, new Document("$set", doc1), options);
         if (result.getModifiedCount() == 0) {
             return true;
         } else {
@@ -87,13 +89,13 @@ public class UserDao extends AbstractMFlixDao {
      * @return true if successful
      */
     public boolean createUserSession(String userId, String jwt) {
-        Bson query = new Document("jwt", jwt);
         UpdateOptions options = new UpdateOptions();
         options.upsert(true);
         Document data = new Document();
         data.put("user_id", userId);
         data.put("jwt", jwt);
-        UpdateResult result = sessionsCollection.updateOne(query, new Document("$set", data), options);
+        UpdateResult result = sessionsCollection.updateOne(eq("jwt", jwt),
+                new Document("$set", data), options);
 
         return result.getModifiedCount() == 0;
     }
@@ -125,7 +127,7 @@ public class UserDao extends AbstractMFlixDao {
 
     public boolean deleteUserSessions(String userId) {
         try {
-            sessionsCollection.deleteOne(new Document("user_id", userId));
+            sessionsCollection.deleteOne(eq("user_id", userId));
             return true;
         } catch (Exception e) {
             log.error("The was an error while deleting the session", e);
@@ -142,7 +144,7 @@ public class UserDao extends AbstractMFlixDao {
     public boolean deleteUser(String email) {
         deleteUserSessions(email);
         try {
-            usersCollection.deleteOne(new Document("email", email));
+            usersCollection.deleteOne(eq("email", email));
             return true;
         } catch (Exception e) {
             log.error("The was an error while deleting the user", e);
@@ -163,7 +165,7 @@ public class UserDao extends AbstractMFlixDao {
         userPreferences.forEach(updatePrefs::put);
         UpdateOptions options = new UpdateOptions();
         options.upsert(true);
-        UpdateResult result = usersCollection.updateOne(new Document("email", email),
+        UpdateResult result = usersCollection.updateOne(eq("email", email),
                 new Document("$set", new Document("preferences", updatePrefs)),
                 options);
 
