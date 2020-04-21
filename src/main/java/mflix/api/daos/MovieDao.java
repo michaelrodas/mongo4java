@@ -71,9 +71,8 @@ public class MovieDao extends AbstractMFlixDao {
         Bson match = Aggregates.match(Filters.eq("_id", new ObjectId(movieId)));
         pipeline.add(match);
         pipeline.add(lookup("comments", "_id", "movie_id", "comments"));
-        Document movie = moviesCollection.aggregate(pipeline).first();
 
-        return movie;
+        return moviesCollection.aggregate(pipeline).first();
     }
 
     /**

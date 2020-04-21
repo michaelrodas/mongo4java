@@ -1,19 +1,11 @@
 package mflix.api.daos;
 
 import com.mongodb.MongoClientSettings;
-import com.mongodb.MongoWriteException;
-import com.mongodb.ReadConcern;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoCollection;
-import com.mongodb.client.model.Aggregates;
-import com.mongodb.client.model.Filters;
-import com.mongodb.client.model.Sorts;
-import com.mongodb.client.model.Updates;
-import com.mongodb.client.result.DeleteResult;
 import com.mongodb.client.result.UpdateResult;
 import mflix.api.models.Comment;
 import mflix.api.models.Critic;
-import org.bson.Document;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.codecs.pojo.PojoCodecProvider;
 import org.bson.conversions.Bson;
@@ -24,11 +16,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import java.text.MessageFormat;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 
+import static com.mongodb.client.model.Filters.and;
+import static com.mongodb.client.model.Filters.eq;
+import static com.mongodb.client.model.Updates.set;
 import static org.bson.codecs.configuration.CodecRegistries.fromProviders;
 import static org.bson.codecs.configuration.CodecRegistries.fromRegistries;
 
@@ -61,7 +54,7 @@ public class CommentDao extends AbstractMFlixDao {
      * @return Comment object corresponding to the identifier value
      */
     public Comment getComment(String id) {
-        return commentCollection.find(new Document("_id", new ObjectId(id))).first();
+        return commentCollection.find(eq("_id", new ObjectId(id))).first();
     }
 
     /**
@@ -76,12 +69,12 @@ public class CommentDao extends AbstractMFlixDao {
      * returns the resulting Comment object.
      */
     public Comment addComment(Comment comment) {
-
-        // TODO> Ticket - Update User reviews: implement the functionality that enables adding a new
-        // comment.
-        // TODO> Ticket - Handling Errors: Implement a try catch block to
-        // handle a potential write exception when given a wrong commentId.
-        return null;
+        if (comment.getId() == null) {
+            throw new IncorrectDaoOperation("Couldn't insert the comment");
+        } else {
+            commentCollection.insertOne(comment);
+            return comment;
+        }
     }
 
     /**
@@ -98,12 +91,15 @@ public class CommentDao extends AbstractMFlixDao {
      * @return true if successfully updates the comment text.
      */
     public boolean updateComment(String commentId, String text, String email) {
-
-        // TODO> Ticket - Update User reviews: implement the functionality that enables updating an
-        // user own comments
-        // TODO> Ticket - Handling Errors: Implement a try catch block to
-        // handle a potential write exception when given a wrong commentId.
-        return false;
+        UpdateResult result;
+        try {
+            Bson queryFilter = and(
+                    eq("_id", new ObjectId(commentId)), eq("email", email));
+            result = commentCollection.updateOne(queryFilter, set("text", text));
+        } catch (Exception e) {
+            throw new IncorrectDaoOperation("Couldn't update the comment");
+        }
+        return result.getModifiedCount() != 0;
     }
 
     /**
@@ -114,11 +110,13 @@ public class CommentDao extends AbstractMFlixDao {
      * @return true if successful deletes the comment.
      */
     public boolean deleteComment(String commentId, String email) {
-        // TODO> Ticket Delete Comments - Implement the method that enables the deletion of a user
-        // comment
-        // TIP: make sure to match only users that own the given commentId
-        // TODO> Ticket Handling Errors - Implement a try catch block to
-        // handle a potential write exception when given a wrong commentId.
+        try {
+            commentCollection.deleteOne(and(
+                    eq("_id", new ObjectId(commentId)), eq("email", email)));
+            return true;
+        } catch (Exception e) {
+            log.error("The was an error while deleting the user", e);
+        }
         return false;
     }
 
