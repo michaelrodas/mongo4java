@@ -14,8 +14,7 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
-import static com.mongodb.client.model.Aggregates.limit;
-import static com.mongodb.client.model.Aggregates.skip;
+import static com.mongodb.client.model.Aggregates.*;
 import static com.mongodb.client.model.Filters.all;
 import static com.mongodb.client.model.Filters.in;
 import static com.mongodb.client.model.Projections.fields;
@@ -71,8 +70,7 @@ public class MovieDao extends AbstractMFlixDao {
         // match stage to find movie
         Bson match = Aggregates.match(Filters.eq("_id", new ObjectId(movieId)));
         pipeline.add(match);
-        // TODO> Ticket: Get Comments - implement the lookup stage that allows the comments to
-        // retrieved with Movies.
+        pipeline.add(lookup("comments", "_id", "movie_id", "comments"));
         Document movie = moviesCollection.aggregate(pipeline).first();
 
         return movie;
