@@ -3,6 +3,7 @@ package mflix.api.daos;
 import com.mongodb.MongoClientSettings;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoCollection;
+import com.mongodb.client.result.DeleteResult;
 import com.mongodb.client.result.UpdateResult;
 import mflix.api.models.Comment;
 import mflix.api.models.Critic;
@@ -110,14 +111,14 @@ public class CommentDao extends AbstractMFlixDao {
      * @return true if successful deletes the comment.
      */
     public boolean deleteComment(String commentId, String email) {
+        DeleteResult result = null;
         try {
-            commentCollection.deleteOne(and(
+            result = commentCollection.deleteOne(and(
                     eq("_id", new ObjectId(commentId)), eq("email", email)));
-            return true;
         } catch (Exception e) {
             log.error("The was an error while deleting the user", e);
         }
-        return false;
+        return result != null && result.getDeletedCount() >0;
     }
 
     /**
