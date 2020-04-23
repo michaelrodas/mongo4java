@@ -115,6 +115,9 @@ public class CommentDao extends AbstractMFlixDao {
      * @return true if successful deletes the comment.
      */
     public boolean deleteComment(String commentId, String email) {
+        if (commentId.isEmpty()) {
+            throw new IllegalArgumentException("commentId can't be empty");
+        }
         DeleteResult result = null;
         try {
             result = commentCollection.deleteOne(and(
