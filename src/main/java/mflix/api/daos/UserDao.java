@@ -20,6 +20,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import static com.mongodb.client.model.Filters.eq;
 import static com.mongodb.client.model.Updates.set;
@@ -58,26 +59,11 @@ public class UserDao extends AbstractMFlixDao {
      * @return True if successful, throw IncorrectDaoOperation otherwise
      */
     public boolean addUser(User user) {
-        Document doc1 = new Document();
-        doc1.put("name", user.getName());
-        doc1.put("email", user.getEmail());
-        doc1.put("hashedpw", user.getHashedpw());
-        doc1.put("admin", user.isAdmin());
-        doc1.put("empty", user.isEmpty());
-        if (user.getPreferences() != null) {
-            doc1.putAll(user.getPreferences());
-        }
-
-        Bson query = eq("email", user.getEmail());
-
-        UpdateOptions options = new UpdateOptions();
-        options.upsert(true);
-
-        UpdateResult result = usersCollection.withWriteConcern(WriteConcern.W1).
-                updateOne(query, new Document("$set", doc1), options);
-        if (result.getModifiedCount() == 0) {
+        try {
+            usersCollection.withWriteConcern(WriteConcern.W1.withWTimeout(2, TimeUnit.MICROSECONDS)).
+                    insertOne(user);
             return true;
-        } else {
+        } catch (Exception e) {
             throw new IncorrectDaoOperation("Couldn't insert user");
         }
     }

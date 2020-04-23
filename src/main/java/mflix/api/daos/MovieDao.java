@@ -19,6 +19,7 @@ import static com.mongodb.client.model.Filters.all;
 import static com.mongodb.client.model.Filters.in;
 import static com.mongodb.client.model.Projections.fields;
 import static com.mongodb.client.model.Projections.include;
+import static com.mongodb.client.model.Sorts.descending;
 
 @Component
 public class MovieDao extends AbstractMFlixDao {
@@ -48,10 +49,7 @@ public class MovieDao extends AbstractMFlixDao {
      * @return true if valid movieId.
      */
     private boolean validIdValue(String movieId) {
-        //TODO> Ticket: Handling Errors - implement a way to catch a
-        //any potential exceptions thrown while validating a movie id.
-        //Check out this method's use in the method that follows.
-        return true;
+        return ObjectId.isValid(movieId);
     }
 
     /**
@@ -86,9 +84,8 @@ public class MovieDao extends AbstractMFlixDao {
     @SuppressWarnings("UnnecessaryLocalVariable")
     public List<Document> getMovies(int limit, int skip) {
         String defaultSortKey = "tomatoes.viewer.numReviews";
-        List<Document> movies =
-                new ArrayList<>(getMovies(limit, skip, Sorts.descending(defaultSortKey)));
-        return movies;
+
+        return getMovies(limit, skip, descending(defaultSortKey));
     }
 
     /**
@@ -167,7 +164,7 @@ public class MovieDao extends AbstractMFlixDao {
      */
     public List<Document> getMoviesByCast(String sortKey, int limit, int skip, String... cast) {
         Bson castFilter = in("cast", cast);
-        Bson sort = Sorts.descending(sortKey);
+        Bson sort = descending(sortKey);
 
         List<Document> movies = new ArrayList<>();
         moviesCollection
@@ -193,7 +190,7 @@ public class MovieDao extends AbstractMFlixDao {
         // query filter
         Bson castFilter = Filters.in("genres", genres);
         // sort key
-        Bson sort = Sorts.descending(sortKey);
+        Bson sort = descending(sortKey);
         List<Document> movies = new ArrayList<>();
 
         moviesCollection.find(castFilter).limit(limit).skip(skip).sort(sort).iterator()
@@ -267,7 +264,7 @@ public class MovieDao extends AbstractMFlixDao {
         String sortKey = "tomatoes.viewer.numReviews";
         Bson skipStage = skip(skip);
         Bson matchStage = Aggregates.match(Filters.in("cast", cast));
-        Bson sortStage = Aggregates.sort(Sorts.descending(sortKey));
+        Bson sortStage = Aggregates.sort(descending(sortKey));
         Bson limitStage = limit(limit);
         Bson facetStage = buildFacetStage();
         // Using a LinkedList to ensure insertion order
