@@ -8,59 +8,64 @@ import java.util.Date;
 import java.util.List;
 
 public class ActorBasic {
-  private ObjectId id;
+    @BsonProperty("_id")
+    private ObjectId id;
 
-  private String name;
-  private Date dateOfBirth;
+    private String name;
 
-  private List awards;
-  private int numMovies;
+    @BsonProperty("date_of_birth")
+    private Date dateOfBirth;
 
-  public ActorBasic() { // constructor
-  }
+    private List awards;
 
-  public String getName() {
-    return name;
-  }
+    @BsonProperty("num_movies")
+    private int numMovies;
 
-  public void setName(String name) {
-    this.name = name;
-  }
+    public ActorBasic() { // constructor
+    }
 
-  public Date getDateOfBirth() {
-    return dateOfBirth;
-  }
+    public String getName() {
+        return name;
+    }
 
-  public void setDateOfBirth(Date dateOfBirth) {
-    this.dateOfBirth = dateOfBirth;
-  }
+    public void setName(String name) {
+        this.name = name;
+    }
 
-  public List getAwards() {
-    return awards;
-  }
+    public Date getDateOfBirth() {
+        return dateOfBirth;
+    }
 
-  public void setAwards(List awards) {
-    this.awards = awards;
-  }
+    public void setDateOfBirth(Date dateOfBirth) {
+        this.dateOfBirth = dateOfBirth;
+    }
 
-  public int getNumMovies() {
-    return numMovies;
-  }
+    public List getAwards() {
+        return awards;
+    }
 
-  public void setNumMovies(int numMovies) {
-    this.numMovies = numMovies;
-  }
+    public void setAwards(List awards) {
+        this.awards = awards;
+    }
 
-  public ObjectId getId() {
-    return id;
-  }
+    public int getNumMovies() {
+        return numMovies;
+    }
 
-  public void setId(ObjectId id) {
-    this.id = id;
-  }
+    public void setNumMovies(int numMovies) {
+        this.numMovies = numMovies;
+    }
 
-  public ActorBasic withNewId() {
-    setId(new ObjectId());
-    return this;
-  }
+    public ObjectId getId() {
+        return id;
+    }
+
+    public void setId(ObjectId id) {
+        this.id = id;
+    }
+
+    public ActorBasic withNewId() {
+        setId(new ObjectId());
+        return this;
+    }
 }

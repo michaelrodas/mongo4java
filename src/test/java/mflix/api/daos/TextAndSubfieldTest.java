@@ -16,9 +16,6 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
 import java.util.ArrayList;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
 @SpringBootTest(classes = {MongoDBConfiguration.class})
 @EnableConfigurationProperties
 @EnableAutoConfiguration
