@@ -109,6 +109,7 @@ public class Migrator {
         List<WriteModel<Document>> bulkWrites = new ArrayList<>();
 
         // iterate over the documents and apply the transformations.
+        /*
         for (Document doc : movies.find(dateStringFilter)) {
 
             // Apply lastupdate string to date conversion
@@ -117,8 +118,12 @@ public class Migrator {
                 bulkWrites.add(updateDate);
             }
         }
+         */
+
+        movies.find(dateStringFilter).forEach(doc -> bulkWrites.add(transformDates(doc, dateFormat)));
 
         Bson ratingStringFilter = not(type("imdb.rating", "number"));
+        /*
         for (Document doc : movies.find(ratingStringFilter)) {
             // Apply "imdb.rating" string to number conversion
             WriteModel<Document> updateRating = transformRating(doc);
@@ -126,6 +131,9 @@ public class Migrator {
                 bulkWrites.add(updateRating);
             }
         }
+         */
+
+        movies.find(ratingStringFilter).forEach(doc -> bulkWrites.add(transformRating(doc)));
 
         // execute the bulk update
         BulkWriteOptions bulkWriteOptions = new BulkWriteOptions().ordered(false);
